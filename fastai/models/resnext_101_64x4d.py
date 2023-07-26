@@ -10,9 +10,7 @@ class LambdaBase(nn.Sequential):
         self.lambda_func = fn
 
     def forward_prepare(self, input):
-        output = []
-        for module in self._modules.values():
-            output.append(module(input))
+        output = [module(input) for module in self._modules.values()]
         return output if output else input
 
 class Lambda(LambdaBase):

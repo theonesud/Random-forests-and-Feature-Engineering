@@ -95,7 +95,7 @@ def cutout(im, n_holes, length):
     """ Cut out n_holes number of square holes of size length in image at random locations. Holes may overlap. """
     r,c,*_ = im.shape
     mask = np.ones((r, c), np.int32)
-    for n in range(n_holes):
+    for _ in range(n_holes):
         y = np.random.randint(0, r)
         x = np.random.randint(0, c)
 
@@ -104,7 +104,7 @@ def cutout(im, n_holes, length):
         x1 = int(np.clip(x - length / 2, 0, c))
         x2 = int(np.clip(x + length / 2, 0, c))
         mask[y1: y2, x1: x2] = 0.
-    
+
     mask = mask[:,:,None]
     im = im * mask
     return im
@@ -421,7 +421,7 @@ class RandomRotate(CoordTransform):
     def __init__(self, deg, p=0.75, mode=cv2.BORDER_REFLECT, tfm_y=TfmType.NO):
         super().__init__(tfm_y)
         self.deg,self.p = deg,p
-        if tfm_y == TfmType.COORD or tfm_y == TfmType.CLASS:
+        if tfm_y in [TfmType.COORD, TfmType.CLASS]:
             self.modes = (mode,cv2.BORDER_CONSTANT)
         else:
             self.modes = (mode,mode)

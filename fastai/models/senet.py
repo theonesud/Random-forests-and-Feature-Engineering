@@ -338,13 +338,12 @@ class SENet(nn.Module):
                 nn.BatchNorm2d(planes * block.expansion),
             )
 
-        layers = []
-        layers.append(block(self.inplanes, planes, groups, reduction, stride,
-                            downsample))
+        layers = [block(self.inplanes, planes, groups, reduction, stride, downsample)]
         self.inplanes = planes * block.expansion
-        for i in range(1, blocks):
-            layers.append(block(self.inplanes, planes, groups, reduction))
-
+        layers.extend(
+            block(self.inplanes, planes, groups, reduction)
+            for _ in range(1, blocks)
+        )
         return nn.Sequential(*layers)
 
     def features(self, x):
@@ -370,9 +369,9 @@ class SENet(nn.Module):
 
 
 def initialize_pretrained_model(model, num_classes, settings):
-    assert num_classes == settings['num_classes'], \
-        'num_classes should be {}, but is {}'.format(
-            settings['num_classes'], num_classes)
+    assert (
+        num_classes == settings['num_classes']
+    ), f"num_classes should be {settings['num_classes']}, but is {num_classes}"
     model.load_state_dict(model_zoo.load_url(settings['url']))
     model.input_space = settings['input_space']
     model.input_size = settings['input_size']

@@ -69,7 +69,7 @@ class DataLoader(object):
             return {key: self.np_collate([d[key] for d in batch]) for key in b}
         elif isinstance(b, collections.Sequence):
             return [self.np_collate(samples) for samples in zip(*batch)]
-        raise TypeError(("batch must contain numbers, dicts or lists; found {}".format(type(b))))
+        raise TypeError(f"batch must contain numbers, dicts or lists; found {type(b)}")
 
     def get_batch(self, indices):
         res = self.np_collate([self.dataset[i] for i in indices])

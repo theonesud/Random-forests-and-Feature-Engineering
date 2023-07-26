@@ -174,12 +174,11 @@ def fit(model, data, n_epochs, opt, crit, metrics=None, callbacks=None, stepper=
                 print(layout.format(*names))
                 print_stats(epoch, [debias_loss] + vals, visualize)
             prev_val = [debias_loss] + vals
-            
+
             ep_vals = append_stats(ep_vals, epoch, [debias_loss] + vals)
         if stop: break
     for cb in callbacks: cb.on_train_end()
-    if get_ep_vals: return vals, ep_vals
-    else: return vals
+    return (vals, ep_vals) if get_ep_vals else vals
 
 def append_stats(ep_vals, epoch, values, decimals=6):
     values = np.array(values, dtype=np.float)
@@ -260,8 +259,7 @@ def predict_batch(m, x):
 def predict_with_targs_(m, dl):
     m.eval()
     if hasattr(m, 'reset'): m.reset()
-    res = []
-    for *x,y in iter(dl): res.append([get_prediction(to_np(m(*VV(x)))),to_np(y)])
+    res = [[get_prediction(to_np(m(*VV(x)))),to_np(y)] for *x, y in iter(dl)]
     return zip(*res)
 
 def predict_with_targs(m, dl):
@@ -293,9 +291,11 @@ def model_summary(m, inputs):
                 params +=  torch.prod(torch.LongTensor(list(module.bias.size())))
             summary[m_key]['nb_params'] = params
 
-        if (not isinstance(module, nn.Sequential) and
-           not isinstance(module, nn.ModuleList) and
-           not (module == m)):
+        if (
+            not isinstance(module, nn.Sequential)
+            and not isinstance(module, nn.ModuleList)
+            and module != m
+        ):
             hooks.append(module.register_forward_hook(hook))
 
     summary = OrderedDict()

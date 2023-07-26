@@ -48,16 +48,18 @@ class LayerOptimizer():
         self.wds=wds
     
     def set_mom(self,momentum):
-        if 'betas' in self.opt.param_groups[0]:
-            for pg in self.opt.param_groups: pg['betas'] = (momentum, pg['betas'][1])
-        else:
-            for pg in self.opt.param_groups: pg['momentum'] = momentum
+        for pg in self.opt.param_groups:
+            if 'betas' in self.opt.param_groups[0]:
+                pg['betas'] = (momentum, pg['betas'][1])
+            else:
+                pg['momentum'] = momentum
     
     def set_beta(self,beta):
-        if 'betas' in self.opt.param_groups[0]:
-            for pg in self.opt.param_groups: pg['betas'] = (pg['betas'][0],beta)
-        elif 'alpha' in self.opt.param_groups[0]:
-            for pg in self.opt.param_groups: pg['alpha'] = beta
+        for pg in self.opt.param_groups:
+            if 'betas' in self.opt.param_groups[0]:
+                pg['betas'] = (pg['betas'][0],beta)
+            elif 'alpha' in self.opt.param_groups[0]:
+                pg['alpha'] = beta
 
     def set_opt_fn(self, opt_fn):
         if type(self.opt) != type(opt_fn(self.opt_params())):

@@ -120,7 +120,7 @@ class LanguageModelLoader():
 
     def __init__(self, ds, bs, bptt, backwards=False):
         self.bs,self.bptt,self.backwards = bs,bptt,backwards
-        text = sum([o.text for o in ds], [])
+        text = sum((o.text for o in ds), [])
         fld = ds.fields['text']
         nums = fld.numericalize([text],device=None if torch.cuda.is_available() else -1)
         self.data = self.batchify(nums)
@@ -170,8 +170,7 @@ class ConcatTextDataset(torchtext.data.Dataset):
     def __init__(self, path, text_field, newline_eos=True, encoding='utf-8', **kwargs):
         fields = [('text', text_field)]
         text = []
-        if os.path.isdir(path): paths=glob(f'{path}/*.*')
-        else: paths=[path]
+        paths = glob(f'{path}/*.*') if os.path.isdir(path) else [path]
         for p in paths:
             for line in open(p, encoding=encoding): text += text_field.preprocess(line)
             if newline_eos: text.append('<eos>')
@@ -321,7 +320,7 @@ class TextDataLoader():
 
     def __iter__(self):
         it = iter(self.src)
-        for i in range(len(self)):
+        for _ in range(len(self)):
             b = next(it)
             yield getattr(b, self.x_fld).data, getattr(b, self.y_fld).data
 

@@ -126,5 +126,4 @@ class DynamicUnet(nn.Module):
         if hasattr(self, 'extra_block'):
             x = self.extra_block(x)
 
-        out = self.final_conv(x)
-        return out
+        return self.final_conv(x)

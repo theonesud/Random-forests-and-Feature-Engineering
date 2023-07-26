@@ -94,9 +94,11 @@ def read_dir(path, folder):
     if any(fnames):
         return [os.path.relpath(f,path) for f in fnames]
     elif any(directories):
-        raise FileNotFoundError("{} has subdirectories but contains no files. Is your directory structure is correct?".format(full_path))
+        raise FileNotFoundError(
+            f"{full_path} has subdirectories but contains no files. Is your directory structure is correct?"
+        )
     else:
-        raise FileNotFoundError("{} folder doesn't exist or is empty".format(full_path))
+        raise FileNotFoundError(f"{full_path} folder doesn't exist or is empty")
 
 def read_dirs(path, folder):
     '''
@@ -172,7 +174,15 @@ def csv_source(folder, csv_file, skip_header=True, suffix='', continuous=False, 
     return dict_source(folder, fnames, csv_labels, suffix, continuous)
 
 def dict_source(folder, fnames, csv_labels, suffix='', continuous=False):
-    all_labels = sorted(list(set(p for o in csv_labels.values() for p in ([] if type(o) == float else o))))
+    all_labels = sorted(
+        list(
+            {
+                p
+                for o in csv_labels.values()
+                for p in ([] if type(o) == float else o)
+            }
+        )
+    )
     full_names = [os.path.join(folder,str(fn)+suffix) for fn in fnames]
     if continuous:
         label_arr = np.array([np.array(csv_labels[i]).astype(np.float32)
@@ -180,8 +190,8 @@ def dict_source(folder, fnames, csv_labels, suffix='', continuous=False):
     else:
         label2idx = {v:k for k,v in enumerate(all_labels)}
         label_arr = nhot_labels(label2idx, csv_labels, fnames, len(all_labels))
-        is_single = np.all(label_arr.sum(axis=1)==1)
-        if is_single: label_arr = np.argmax(label_arr, axis=1)
+        if is_single := np.all(label_arr.sum(axis=1) == 1):
+            label_arr = np.argmax(label_arr, axis=1)
     return full_names, label_arr, all_labels
 
 class BaseDataset(Dataset):
@@ -263,19 +273,20 @@ def open_image(fn):
     """
     flags = cv2.IMREAD_UNCHANGED+cv2.IMREAD_ANYDEPTH+cv2.IMREAD_ANYCOLOR
     if not os.path.exists(fn) and not str(fn).startswith("http"):
-        raise OSError('No such file or directory: {}'.format(fn))
+        raise OSError(f'No such file or directory: {fn}')
     elif os.path.isdir(fn) and not str(fn).startswith("http"):
-        raise OSError('Is a directory: {}'.format(fn))
+        raise OSError(f'Is a directory: {fn}')
     elif isdicom(fn):
         slice = pydicom.read_file(fn)
-        if slice.PhotometricInterpretation.startswith('MONOCHROME'):
-            # Make a fake RGB image
-            im = np.stack([slice.pixel_array]*3,-1)
-            return im / ((1 << slice.BitsStored)-1)
-        else:
+        if not slice.PhotometricInterpretation.startswith('MONOCHROME'):
             # No support for RGB yet, as it involves various color spaces.
             # It shouldn't be too difficult to add though, if needed.
-            raise OSError('Unsupported DICOM image with PhotometricInterpretation=={}'.format(slice.PhotometricInterpretation))
+            raise OSError(
+                f'Unsupported DICOM image with PhotometricInterpretation=={slice.PhotometricInterpretation}'
+            )
+        # Make a fake RGB image
+        im = np.stack([slice.pixel_array]*3,-1)
+        return im / ((1 << slice.BitsStored)-1)
     else:
         #res = np.array(Image.open(fn), dtype=np.float32)/255
         #if len(res.shape)==2: res = np.repeat(res[...,None],3,2)
@@ -290,7 +301,7 @@ def open_image(fn):
             if im is None: raise OSError(f'File not recognized by opencv: {fn}')
             return cv2.cvtColor(im, cv2.COLOR_BGR2RGB)
         except Exception as e:
-            raise OSError('Error handling image at: {}'.format(fn)) from e
+            raise OSError(f'Error handling image at: {fn}') from e
 
 class FilesDataset(BaseDataset):
     def __init__(self, fnames, transform, path):
@@ -437,12 +448,10 @@ class ImageData(ModelData):
         operation was aborted)
         fn (function): optional custom resizing function
         """
-        new_ds = []
         dls = [self.trn_dl,self.val_dl,self.fix_dl,self.aug_dl]
-        if self.test_dl: dls += [self.test_dl, self.test_aug_dl]
-        else: dls += [None,None]
+        dls += [self.test_dl, self.test_aug_dl] if self.test_dl else [None,None]
         t = tqdm_notebook(dls)
-        for dl in t: new_ds.append(self.resized(dl, targ_sz, new_path, resume, fn))
+        new_ds = [self.resized(dl, targ_sz, new_path, resume, fn) for dl in t]
         t.close()
         return self.__class__(new_ds[0].path, new_ds, self.bs, self.num_workers, self.classes)
 
@@ -458,11 +467,10 @@ class ImageData(ModelData):
             if isinstance(test, tuple):
                 test_lbls = test[1]
                 test = test[0]
+            elif len(trn[1].shape) == 1:
+                test_lbls = np.zeros((len(test),1))
             else:
-                if len(trn[1].shape) == 1:
-                    test_lbls = np.zeros((len(test),1))
-                else:
-                    test_lbls = np.zeros((len(test),trn[1].shape[1]))
+                test_lbls = np.zeros((len(test),trn[1].shape[1]))
             res += [
                 fn(test, test_lbls, tfms[1], **kwargs), # test
                 fn(test, test_lbls, tfms[0], **kwargs)  # test_aug
@@ -510,7 +518,9 @@ class ImageClassifierData(ImageData):
         Returns:
             ImageClassifierData
         """
-        assert not(tfms[0] is None or tfms[1] is None), "please provide transformations for your train and validation sets"
+        assert (
+            tfms[0] is not None and tfms[1] is not None
+        ), "please provide transformations for your train and validation sets"
         trn,val = [folder_source(path, o) for o in (trn_name, val_name)]
         if test_name:
             test = folder_source(path, test_name) if test_with_labels else read_dir(path, test_name)
@@ -546,7 +556,9 @@ class ImageClassifierData(ImageData):
         Returns:
             ImageClassifierData
         """
-        assert not (tfms[0] is None or tfms[1] is None), "please provide transformations for your train and validation sets"
+        assert (
+            tfms[0] is not None and tfms[1] is not None
+        ), "please provide transformations for your train and validation sets"
         assert not (os.path.isabs(folder)), "folder needs to be a relative path"
         fnames,y,classes = csv_source(folder, csv_fname, skip_header, suffix, continuous=continuous, cat_separator=cat_separator)
         return cls.from_names_and_array(path, fnames, y, classes, val_idxs, test_name,
@@ -571,7 +583,9 @@ class ImageClassifierData(ImageData):
         Returns:
             ImageClassifierData
         """
-        assert not (tfms[0] is None or tfms[1] is None), "please provide transformations for your train and validation sets"
+        assert (
+            tfms[0] is not None and tfms[1] is not None
+        ), "please provide transformations for your train and validation sets"
         assert not (os.path.isabs(folder)), "folder needs to be a relative path"
         fnames = np.core.defchararray.add(f'{folder}/', sorted(os.listdir(f'{path}{folder}')))
         return cls.from_names_and_array(path, fnames, y, classes, val_idxs, test_name,

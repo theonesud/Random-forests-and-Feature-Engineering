@@ -57,8 +57,7 @@ class QRNNLayer(nn.Module):
             source = X
         elif self.window == 2:
             # Construct the x_{t-1} tensor with optional x_{-1}, otherwise a zeroed out value for x_{-1}
-            Xm1 = []
-            Xm1.append(self.prevX if self.prevX is not None else X[:1, :, :] * 0)
+            Xm1 = [self.prevX if self.prevX is not None else X[:1, :, :] * 0]
             # Note: in case of len(X) == 1, X[:-1, :, :] results in slicing of empty tensor == bad
             if len(X) > 1:
                 Xm1.append(X[:-1, :, :])
@@ -79,8 +78,6 @@ class QRNNLayer(nn.Module):
         Z = torch.nn.functional.tanh(Z)
         F = torch.nn.functional.sigmoid(F)
 
-        # If zoneout is specified, we perform dropout on the forget gates in F
-        # If an element of F is zero, that means the corresponding neuron keeps the old value
         if self.zoneout:
             if self.training:
                 mask = Variable(F.data.new(*F.size()).bernoulli_(1 - self.zoneout), requires_grad=False)
@@ -99,11 +96,7 @@ class QRNNLayer(nn.Module):
         C = ForgetMult()(F, Z, hidden, use_cuda=self.use_cuda)
 
         # Apply (potentially optional) output gate
-        if self.output_gate:
-            H = torch.nn.functional.sigmoid(O) * C
-        else:
-            H = C
-
+        H = torch.nn.functional.sigmoid(O) * C if self.output_gate else C
         # In an optimal world we may want to backprop to x_{t-1} but ...
         if self.window > 1 and self.save_prev_x:
             self.prevX = Variable(X[-1:, :, :].data, requires_grad=False)

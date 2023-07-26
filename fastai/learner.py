@@ -95,15 +95,18 @@ class Learner():
 
     def unfreeze(self): self.freeze_to(0)
 
-    def get_model_path(self, name): return os.path.join(self.models_path,name)+'.h5'
+    def get_model_path(self, name):
+        return f'{os.path.join(self.models_path, name)}.h5'
     
     def save(self, name): 
         save_model(self.model, self.get_model_path(name))
-        if hasattr(self, 'swa_model'): save_model(self.swa_model, self.get_model_path(name)[:-3]+'-swa.h5')
+        if hasattr(self, 'swa_model'):
+            save_model(self.swa_model, f'{self.get_model_path(name)[:-3]}-swa.h5')
                        
     def load(self, name): 
         load_model(self.model, self.get_model_path(name))
-        if hasattr(self, 'swa_model'): load_model(self.swa_model, self.get_model_path(name)[:-3]+'-swa.h5')
+        if hasattr(self, 'swa_model'):
+            load_model(self.swa_model, f'{self.get_model_path(name)[:-3]}-swa.h5')
 
     def set_data(self, data): self.data_ = data
 
@@ -385,7 +388,8 @@ class Learner():
         Returns:
             a numpy array containing the predictions from the model
         """
-        if not isinstance(arr, np.ndarray): raise OSError(f'Not valid numpy array')
+        if not isinstance(arr, np.ndarray):
+            raise OSError('Not valid numpy array')
         self.model.eval()
         return to_np(self.model(to_gpu(V(T(arr)))))
 
@@ -411,7 +415,10 @@ class Learner():
         dl2 = self.data.test_aug_dl if is_test else self.data.aug_dl
         preds1,targs = predict_with_targs(self.model, dl1)
         preds1 = [preds1]*math.ceil(n_aug/4)
-        preds2 = [predict_with_targs(self.model, dl2)[0] for i in tqdm(range(n_aug), leave=False)]
+        preds2 = [
+            predict_with_targs(self.model, dl2)[0]
+            for _ in tqdm(range(n_aug), leave=False)
+        ]
         return np.stack(preds1+preds2), targs
 
     def fit_opt_sched(self, phases, cycle_save_name=None, best_save_name=None, stop_div=False, data_list=None, callbacks=None, 

@@ -67,7 +67,7 @@ def get_sample(df,n):
     idxs = sorted(np.random.permutation(len(df))[:n])
     return df.iloc[idxs].copy()
 
-def add_datepart(df, fldnames, drop=True, time=False, errors="raise"):	
+def add_datepart(df, fldnames, drop=True, time=False, errors="raise"):
     """add_datepart converts a column of df from a datetime64 to many columns containing
     the information from the date. This applies changes inplace.
     Parameters:
@@ -118,9 +118,10 @@ def add_datepart(df, fldnames, drop=True, time=False, errors="raise"):
         targ_pre = re.sub('[Dd]ate$', '', fldname)
         attr = ['Year', 'Month', 'Week', 'Day', 'Dayofweek', 'Dayofyear',
                 'Is_month_end', 'Is_month_start', 'Is_quarter_end', 'Is_quarter_start', 'Is_year_end', 'Is_year_start']
-        if time: attr = attr + ['Hour', 'Minute', 'Second']
+        if time:
+            attr += ['Hour', 'Minute', 'Second']
         for n in attr: df[targ_pre + n] = getattr(fld.dt, n.lower())
-        df[targ_pre + 'Elapsed'] = fld.astype(np.int64) // 10 ** 9
+        df[f'{targ_pre}Elapsed'] = fld.astype(np.int64) // 10 ** 9
         if drop: df.drop(fldname, axis=1, inplace=True)
 
 def is_date(x): return np.issubdtype(x.dtype, np.datetime64)
@@ -244,7 +245,7 @@ def fix_missing(df, col, name, na_dict):
     """
     if is_numeric_dtype(col):
         if pd.isnull(col).sum() or (name in na_dict):
-            df[name+'_na'] = pd.isnull(col)
+            df[f'{name}_na'] = pd.isnull(col)
             filler = na_dict[name] if name in na_dict else col.median()
             df[name] = col.fillna(filler)
             na_dict[name] = filler
@@ -365,8 +366,7 @@ def proc_df(df, y_fld=None, skip_flds=None, ignore_flds=None, do_scale=False, na
     """
     if not ignore_flds: ignore_flds=[]
     if not skip_flds: skip_flds=[]
-    if subset: df = get_sample(df,subset)
-    else: df = df.copy()
+    df = get_sample(df,subset) if subset else df.copy()
     ignored_flds = df.loc[:, ignore_flds]
     df.drop(ignore_flds, axis=1, inplace=True)
     if preproc_fn: preproc_fn(df)
@@ -377,18 +377,27 @@ def proc_df(df, y_fld=None, skip_flds=None, ignore_flds=None, do_scale=False, na
         skip_flds += [y_fld]
     df.drop(skip_flds, axis=1, inplace=True)
 
-    if na_dict is None: na_dict = {}
-    else: na_dict = na_dict.copy()
+    na_dict = {} if na_dict is None else na_dict.copy()
     na_dict_initial = na_dict.copy()
     for n,c in df.items(): na_dict = fix_missing(df, c, n, na_dict)
     if len(na_dict_initial.keys()) > 0:
-        df.drop([a + '_na' for a in list(set(na_dict.keys()) - set(na_dict_initial.keys()))], axis=1, inplace=True)
+        df.drop(
+            [
+                f'{a}_na'
+                for a in list(
+                    set(na_dict.keys()) - set(na_dict_initial.keys())
+                )
+            ],
+            axis=1,
+            inplace=True,
+        )
     if do_scale: mapper = scale_vars(df, mapper)
     for n,c in df.items(): numericalize(df, c, n, max_n_cat)
     df = pd.get_dummies(df, dummy_na=True)
     df = pd.concat([ignored_flds, df], axis=1)
     res = [df, y, na_dict]
-    if do_scale: res = res + [mapper]
+    if do_scale:
+        res += [mapper]
     return res
 
 def rf_feat_importance(m, df):

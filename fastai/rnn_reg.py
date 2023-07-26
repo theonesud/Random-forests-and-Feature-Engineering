@@ -91,7 +91,7 @@ class WeightDrop(torch.nn.Module):
         for name_w in self.weights:
             w = getattr(self.module, name_w)
             del self.module._parameters[name_w]
-            self.module.register_parameter(name_w + '_raw', nn.Parameter(w.data))
+            self.module.register_parameter(f'{name_w}_raw', nn.Parameter(w.data))
 
 
     def _setweights(self):
@@ -104,7 +104,7 @@ class WeightDrop(torch.nn.Module):
             None
         """
         for name_w in self.weights:
-            raw_w = getattr(self.module, name_w + '_raw')
+            raw_w = getattr(self.module, f'{name_w}_raw')
             w = torch.nn.functional.dropout(raw_w, p=self.dropout, training=self.training)
             if hasattr(self.module, name_w):
                 delattr(self.module, name_w)
@@ -177,14 +177,25 @@ class EmbeddingDropout(nn.Module):
         padding_idx = self.embed.padding_idx
         if padding_idx is None: padding_idx = -1
 
-        
-        if IS_TORCH_04:
-            X = F.embedding(words,
-                masked_embed_weight, padding_idx, self.embed.max_norm,
-                self.embed.norm_type, self.embed.scale_grad_by_freq, self.embed.sparse)
-        else:
-            X = self.embed._backend.Embedding.apply(words,
-                masked_embed_weight, padding_idx, self.embed.max_norm,
-                self.embed.norm_type, self.embed.scale_grad_by_freq, self.embed.sparse)
 
-        return X
+        return (
+            F.embedding(
+                words,
+                masked_embed_weight,
+                padding_idx,
+                self.embed.max_norm,
+                self.embed.norm_type,
+                self.embed.scale_grad_by_freq,
+                self.embed.sparse,
+            )
+            if IS_TORCH_04
+            else self.embed._backend.Embedding.apply(
+                words,
+                masked_embed_weight,
+                padding_idx,
+                self.embed.max_norm,
+                self.embed.norm_type,
+                self.embed.scale_grad_by_freq,
+                self.embed.sparse,
+            )
+        )

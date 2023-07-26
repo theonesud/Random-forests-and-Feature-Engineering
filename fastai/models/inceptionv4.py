@@ -32,8 +32,7 @@ class Mixed_3a(nn.Module):
     def forward(self, x):
         x0 = self.maxpool(x)
         x1 = self.conv(x)
-        out = torch.cat((x0, x1), 1)
-        return out
+        return torch.cat((x0, x1), 1)
 
 class Mixed_4a(nn.Module):
 
@@ -55,8 +54,7 @@ class Mixed_4a(nn.Module):
     def forward(self, x):
         x0 = self.block0(x)
         x1 = self.block1(x)
-        out = torch.cat((x0, x1), 1)
-        return out
+        return torch.cat((x0, x1), 1)
 
 class Mixed_5a(nn.Module):
 
@@ -68,8 +66,7 @@ class Mixed_5a(nn.Module):
     def forward(self, x):
         x0 = self.conv(x)
         x1 = self.maxpool(x)
-        out = torch.cat((x0, x1), 1)
-        return out
+        return torch.cat((x0, x1), 1)
 
 class Inception_A(nn.Module):
 
@@ -98,8 +95,7 @@ class Inception_A(nn.Module):
         x1 = self.block1(x)
         x2 = self.block2(x)
         x3 = self.block3(x)
-        out = torch.cat((x0, x1, x2, x3), 1)
-        return out
+        return torch.cat((x0, x1, x2, x3), 1)
 
 class Reduction_A(nn.Module):
 
@@ -119,8 +115,7 @@ class Reduction_A(nn.Module):
         x0 = self.block0(x)
         x1 = self.block1(x)
         x2 = self.block2(x)
-        out = torch.cat((x0, x1, x2), 1)
-        return out
+        return torch.cat((x0, x1, x2), 1)
 
 class Inception_B(nn.Module):
 
@@ -152,8 +147,7 @@ class Inception_B(nn.Module):
         x1 = self.block1(x)
         x2 = self.block2(x)
         x3 = self.block3(x)
-        out = torch.cat((x0, x1, x2, x3), 1)
-        return out
+        return torch.cat((x0, x1, x2, x3), 1)
 
 class Reduction_B(nn.Module):
 
@@ -178,8 +172,7 @@ class Reduction_B(nn.Module):
         x0 = self.block0(x)
         x1 = self.block1(x)
         x2 = self.block2(x)
-        out = torch.cat((x0, x1, x2), 1)
-        return out
+        return torch.cat((x0, x1, x2), 1)
 
 class Inception_C(nn.Module):
 
@@ -204,7 +197,7 @@ class Inception_C(nn.Module):
 
     def forward(self, x):
         x0 = self.block0(x)
-        
+
         x1_0 = self.block1_0(x)
         x1_1a = self.block1_1a(x1_0)
         x1_1b = self.block1_1b(x1_0)
@@ -219,8 +212,7 @@ class Inception_C(nn.Module):
 
         x3 = self.block3(x)
 
-        out = torch.cat((x0, x1, x2, x3), 1)
-        return out
+        return torch.cat((x0, x1, x2, x3), 1)
 
 class InceptionV4(nn.Module):
 
@@ -277,61 +269,189 @@ def inceptionv4(pretrained=True):
 ######################################################################
 
 def load_conv2d(state_dict, name_pth, name_tf):
-    h5f = h5py.File('dump/InceptionV4/'+name_tf+'.h5', 'r')
-    state_dict[name_pth+'.conv.weight'] = torch.from_numpy(h5f['weights'][()]).permute(3, 2, 0, 1)
-    out_planes = state_dict[name_pth+'.conv.weight'].size(0)
-    state_dict[name_pth+'.bn.weight'] = torch.ones(out_planes)
-    state_dict[name_pth+'.bn.bias'] = torch.from_numpy(h5f['beta'][()])
-    state_dict[name_pth+'.bn.running_mean'] = torch.from_numpy(h5f['mean'][()])
-    state_dict[name_pth+'.bn.running_var'] = torch.from_numpy(h5f['var'][()])
+    h5f = h5py.File(f'dump/InceptionV4/{name_tf}.h5', 'r')
+    state_dict[f'{name_pth}.conv.weight'] = torch.from_numpy(
+        h5f['weights'][()]
+    ).permute(3, 2, 0, 1)
+    out_planes = state_dict[f'{name_pth}.conv.weight'].size(0)
+    state_dict[f'{name_pth}.bn.weight'] = torch.ones(out_planes)
+    state_dict[f'{name_pth}.bn.bias'] = torch.from_numpy(h5f['beta'][()])
+    state_dict[f'{name_pth}.bn.running_mean'] = torch.from_numpy(h5f['mean'][()])
+    state_dict[f'{name_pth}.bn.running_var'] = torch.from_numpy(h5f['var'][()])
     h5f.close()
 
 def load_linear(state_dict, name_pth, name_tf):
-    h5f = h5py.File('dump/InceptionV4/'+name_tf+'.h5', 'r')
-    state_dict[name_pth+'.weight'] = torch.from_numpy(h5f['weights'][()]).t()
-    state_dict[name_pth+'.bias'] = torch.from_numpy(h5f['biases'][()])
+    h5f = h5py.File(f'dump/InceptionV4/{name_tf}.h5', 'r')
+    state_dict[f'{name_pth}.weight'] = torch.from_numpy(h5f['weights'][()]).t()
+    state_dict[f'{name_pth}.bias'] = torch.from_numpy(h5f['biases'][()])
     h5f.close()
 
 def load_mixed_4a_7a(state_dict, name_pth, name_tf):
-    load_conv2d(state_dict, name_pth+'.branch0.0', name_tf+'/Branch_0/Conv2d_0a_1x1')
-    load_conv2d(state_dict, name_pth+'.branch0.1', name_tf+'/Branch_0/Conv2d_1a_3x3')
-    load_conv2d(state_dict, name_pth+'.branch1.0', name_tf+'/Branch_1/Conv2d_0a_1x1')
-    load_conv2d(state_dict, name_pth+'.branch1.1', name_tf+'/Branch_1/Conv2d_0b_1x7')
-    load_conv2d(state_dict, name_pth+'.branch1.2', name_tf+'/Branch_1/Conv2d_0c_7x1')
-    load_conv2d(state_dict, name_pth+'.branch1.3', name_tf+'/Branch_1/Conv2d_1a_3x3')
+    load_conv2d(
+        state_dict,
+        f'{name_pth}.branch0.0',
+        f'{name_tf}/Branch_0/Conv2d_0a_1x1',
+    )
+    load_conv2d(
+        state_dict,
+        f'{name_pth}.branch0.1',
+        f'{name_tf}/Branch_0/Conv2d_1a_3x3',
+    )
+    load_conv2d(
+        state_dict,
+        f'{name_pth}.branch1.0',
+        f'{name_tf}/Branch_1/Conv2d_0a_1x1',
+    )
+    load_conv2d(
+        state_dict,
+        f'{name_pth}.branch1.1',
+        f'{name_tf}/Branch_1/Conv2d_0b_1x7',
+    )
+    load_conv2d(
+        state_dict,
+        f'{name_pth}.branch1.2',
+        f'{name_tf}/Branch_1/Conv2d_0c_7x1',
+    )
+    load_conv2d(
+        state_dict,
+        f'{name_pth}.branch1.3',
+        f'{name_tf}/Branch_1/Conv2d_1a_3x3',
+    )
 
 def load_mixed_5(state_dict, name_pth, name_tf):
-    load_conv2d(state_dict, name_pth+'.branch0', name_tf+'/Branch_0/Conv2d_0a_1x1')
-    load_conv2d(state_dict, name_pth+'.branch1.0', name_tf+'/Branch_1/Conv2d_0a_1x1')
-    load_conv2d(state_dict, name_pth+'.branch1.1', name_tf+'/Branch_1/Conv2d_0b_3x3')
-    load_conv2d(state_dict, name_pth+'.branch2.0', name_tf+'/Branch_2/Conv2d_0a_1x1')
-    load_conv2d(state_dict, name_pth+'.branch2.1', name_tf+'/Branch_2/Conv2d_0b_3x3')
-    load_conv2d(state_dict, name_pth+'.branch2.2', name_tf+'/Branch_2/Conv2d_0c_3x3')
-    load_conv2d(state_dict, name_pth+'.branch3.1', name_tf+'/Branch_3/Conv2d_0b_1x1')
+    load_conv2d(
+        state_dict, f'{name_pth}.branch0', f'{name_tf}/Branch_0/Conv2d_0a_1x1'
+    )
+    load_conv2d(
+        state_dict,
+        f'{name_pth}.branch1.0',
+        f'{name_tf}/Branch_1/Conv2d_0a_1x1',
+    )
+    load_conv2d(
+        state_dict,
+        f'{name_pth}.branch1.1',
+        f'{name_tf}/Branch_1/Conv2d_0b_3x3',
+    )
+    load_conv2d(
+        state_dict,
+        f'{name_pth}.branch2.0',
+        f'{name_tf}/Branch_2/Conv2d_0a_1x1',
+    )
+    load_conv2d(
+        state_dict,
+        f'{name_pth}.branch2.1',
+        f'{name_tf}/Branch_2/Conv2d_0b_3x3',
+    )
+    load_conv2d(
+        state_dict,
+        f'{name_pth}.branch2.2',
+        f'{name_tf}/Branch_2/Conv2d_0c_3x3',
+    )
+    load_conv2d(
+        state_dict,
+        f'{name_pth}.branch3.1',
+        f'{name_tf}/Branch_3/Conv2d_0b_1x1',
+    )
 
 def load_mixed_6(state_dict, name_pth, name_tf):
-    load_conv2d(state_dict, name_pth+'.branch0', name_tf+'/Branch_0/Conv2d_0a_1x1')
-    load_conv2d(state_dict, name_pth+'.branch1.0', name_tf+'/Branch_1/Conv2d_0a_1x1')
-    load_conv2d(state_dict, name_pth+'.branch1.1', name_tf+'/Branch_1/Conv2d_0b_1x7')
-    load_conv2d(state_dict, name_pth+'.branch1.2', name_tf+'/Branch_1/Conv2d_0c_7x1')
-    load_conv2d(state_dict, name_pth+'.branch2.0', name_tf+'/Branch_2/Conv2d_0a_1x1')
-    load_conv2d(state_dict, name_pth+'.branch2.1', name_tf+'/Branch_2/Conv2d_0b_7x1')
-    load_conv2d(state_dict, name_pth+'.branch2.2', name_tf+'/Branch_2/Conv2d_0c_1x7')
-    load_conv2d(state_dict, name_pth+'.branch2.3', name_tf+'/Branch_2/Conv2d_0d_7x1')
-    load_conv2d(state_dict, name_pth+'.branch2.4', name_tf+'/Branch_2/Conv2d_0e_1x7')
-    load_conv2d(state_dict, name_pth+'.branch3.1', name_tf+'/Branch_3/Conv2d_0b_1x1')
+    load_conv2d(
+        state_dict, f'{name_pth}.branch0', f'{name_tf}/Branch_0/Conv2d_0a_1x1'
+    )
+    load_conv2d(
+        state_dict,
+        f'{name_pth}.branch1.0',
+        f'{name_tf}/Branch_1/Conv2d_0a_1x1',
+    )
+    load_conv2d(
+        state_dict,
+        f'{name_pth}.branch1.1',
+        f'{name_tf}/Branch_1/Conv2d_0b_1x7',
+    )
+    load_conv2d(
+        state_dict,
+        f'{name_pth}.branch1.2',
+        f'{name_tf}/Branch_1/Conv2d_0c_7x1',
+    )
+    load_conv2d(
+        state_dict,
+        f'{name_pth}.branch2.0',
+        f'{name_tf}/Branch_2/Conv2d_0a_1x1',
+    )
+    load_conv2d(
+        state_dict,
+        f'{name_pth}.branch2.1',
+        f'{name_tf}/Branch_2/Conv2d_0b_7x1',
+    )
+    load_conv2d(
+        state_dict,
+        f'{name_pth}.branch2.2',
+        f'{name_tf}/Branch_2/Conv2d_0c_1x7',
+    )
+    load_conv2d(
+        state_dict,
+        f'{name_pth}.branch2.3',
+        f'{name_tf}/Branch_2/Conv2d_0d_7x1',
+    )
+    load_conv2d(
+        state_dict,
+        f'{name_pth}.branch2.4',
+        f'{name_tf}/Branch_2/Conv2d_0e_1x7',
+    )
+    load_conv2d(
+        state_dict,
+        f'{name_pth}.branch3.1',
+        f'{name_tf}/Branch_3/Conv2d_0b_1x1',
+    )
 
 def load_mixed_7(state_dict, name_pth, name_tf):
-    load_conv2d(state_dict, name_pth+'.branch0', name_tf+'/Branch_0/Conv2d_0a_1x1')
-    load_conv2d(state_dict, name_pth+'.branch1_0', name_tf+'/Branch_1/Conv2d_0a_1x1')
-    load_conv2d(state_dict, name_pth+'.branch1_1a', name_tf+'/Branch_1/Conv2d_0b_1x3')
-    load_conv2d(state_dict, name_pth+'.branch1_1b', name_tf+'/Branch_1/Conv2d_0c_3x1')
-    load_conv2d(state_dict, name_pth+'.branch2_0', name_tf+'/Branch_2/Conv2d_0a_1x1')
-    load_conv2d(state_dict, name_pth+'.branch2_1', name_tf+'/Branch_2/Conv2d_0b_3x1')
-    load_conv2d(state_dict, name_pth+'.branch2_2', name_tf+'/Branch_2/Conv2d_0c_1x3')
-    load_conv2d(state_dict, name_pth+'.branch2_3a', name_tf+'/Branch_2/Conv2d_0d_1x3')
-    load_conv2d(state_dict, name_pth+'.branch2_3b', name_tf+'/Branch_2/Conv2d_0e_3x1')
-    load_conv2d(state_dict, name_pth+'.branch3.1', name_tf+'/Branch_3/Conv2d_0b_1x1')
+    load_conv2d(
+        state_dict, f'{name_pth}.branch0', f'{name_tf}/Branch_0/Conv2d_0a_1x1'
+    )
+    load_conv2d(
+        state_dict,
+        f'{name_pth}.branch1_0',
+        f'{name_tf}/Branch_1/Conv2d_0a_1x1',
+    )
+    load_conv2d(
+        state_dict,
+        f'{name_pth}.branch1_1a',
+        f'{name_tf}/Branch_1/Conv2d_0b_1x3',
+    )
+    load_conv2d(
+        state_dict,
+        f'{name_pth}.branch1_1b',
+        f'{name_tf}/Branch_1/Conv2d_0c_3x1',
+    )
+    load_conv2d(
+        state_dict,
+        f'{name_pth}.branch2_0',
+        f'{name_tf}/Branch_2/Conv2d_0a_1x1',
+    )
+    load_conv2d(
+        state_dict,
+        f'{name_pth}.branch2_1',
+        f'{name_tf}/Branch_2/Conv2d_0b_3x1',
+    )
+    load_conv2d(
+        state_dict,
+        f'{name_pth}.branch2_2',
+        f'{name_tf}/Branch_2/Conv2d_0c_1x3',
+    )
+    load_conv2d(
+        state_dict,
+        f'{name_pth}.branch2_3a',
+        f'{name_tf}/Branch_2/Conv2d_0d_1x3',
+    )
+    load_conv2d(
+        state_dict,
+        f'{name_pth}.branch2_3b',
+        f'{name_tf}/Branch_2/Conv2d_0e_3x1',
+    )
+    load_conv2d(
+        state_dict,
+        f'{name_pth}.branch3.1',
+        f'{name_tf}/Branch_3/Conv2d_0b_1x1',
+    )
 
 
 def load():
@@ -398,22 +518,23 @@ def test(model):
  
 def test_conv2d(module, name):
     #global output_tf
-    h5f = h5py.File('dump/InceptionV4/'+name+'.h5', 'r')
+    h5f = h5py.File(f'dump/InceptionV4/{name}.h5', 'r')
     output_tf = torch.from_numpy(h5f['relu_out'][()])
     output_tf.transpose_(1,3)
     output_tf.transpose_(2,3)
     h5f.close()
     def test_dist(self, input, output):
         print(name, torch.dist(output.data, output_tf))
+
     module.register_forward_hook(test_dist)
 
 def test_mixed_4a_7a(module, name):
-    test_conv2d(module.branch0[0], name+'/Branch_0/Conv2d_0a_1x1')
-    test_conv2d(module.branch0[1], name+'/Branch_0/Conv2d_1a_3x3')
-    test_conv2d(module.branch1[0], name+'/Branch_1/Conv2d_0a_1x1')
-    test_conv2d(module.branch1[1], name+'/Branch_1/Conv2d_0b_1x7')
-    test_conv2d(module.branch1[2], name+'/Branch_1/Conv2d_0c_7x1')
-    test_conv2d(module.branch1[3], name+'/Branch_1/Conv2d_1a_3x3')
+    test_conv2d(module.branch0[0], f'{name}/Branch_0/Conv2d_0a_1x1')
+    test_conv2d(module.branch0[1], f'{name}/Branch_0/Conv2d_1a_3x3')
+    test_conv2d(module.branch1[0], f'{name}/Branch_1/Conv2d_0a_1x1')
+    test_conv2d(module.branch1[1], f'{name}/Branch_1/Conv2d_0b_1x7')
+    test_conv2d(module.branch1[2], f'{name}/Branch_1/Conv2d_0c_7x1')
+    test_conv2d(module.branch1[3], f'{name}/Branch_1/Conv2d_1a_3x3')
 
 ######################################################################
 ## Main

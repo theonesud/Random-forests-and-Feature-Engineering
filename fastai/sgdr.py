@@ -208,9 +208,7 @@ class LR_Finder2(LR_Finder):
         self.stop_dv = stop_dv
 
     def on_batch_end(self, loss):
-        if self.iteration == self.nb:
-            return True
-        return super().on_batch_end(loss)
+        return True if self.iteration == self.nb else super().on_batch_end(loss)
 
     def plot(self, n_skip=10, n_skip_end=5, smoothed=True):
         if self.metrics is None: self.metrics = []
@@ -289,8 +287,7 @@ class CircularLR(LR_Updater):
         if self.cycle_iter>cut_pt:
             pct = (self.cycle_iter - cut_pt)/(self.nb - cut_pt)
         else: pct = 1 - self.cycle_iter/cut_pt
-        res = self.moms[1] + pct * (self.moms[0] - self.moms[1])
-        return res
+        return self.moms[1] + pct * (self.moms[0] - self.moms[1])
 
 class CircularLR_beta(LR_Updater):
     def __init__(self, layer_opt, nb, div=10, pct=10, on_cycle_end=None, momentums=None):
@@ -323,14 +320,13 @@ class CircularLR_beta(LR_Updater):
 
     def calc_mom(self):
         if self.cycle_iter>2*self.cycle_nb:
-            res = self.moms[0]
+            return self.moms[0]
         elif self.cycle_iter>self.cycle_nb:
             pct = 1 - (self.cycle_iter - self.cycle_nb)/self.cycle_nb
-            res = self.moms[0] + pct * (self.moms[1] - self.moms[0])
+            return self.moms[0] + pct * (self.moms[1] - self.moms[0])
         else:
             pct = self.cycle_iter/self.cycle_nb
-            res = self.moms[0] + pct * (self.moms[1] - self.moms[0])
-        return res
+            return self.moms[0] + pct * (self.moms[1] - self.moms[0])
 
 
 class SaveBestModel(LossRecorder):
@@ -360,17 +356,19 @@ class SaveBestModel(LossRecorder):
         self.model = model
         self.best_loss = None
         self.best_acc = None
-        self.save_method = self.save_when_only_loss if metrics==None else self.save_when_acc
+        self.save_method = (
+            self.save_when_only_loss if metrics is None else self.save_when_acc
+        )
         
     def save_when_only_loss(self, metrics):
         loss = metrics[0]
-        if self.best_loss == None or loss < self.best_loss:
+        if self.best_loss is None or loss < self.best_loss:
             self.best_loss = loss
             self.model.save(f'{self.name}')
     
     def save_when_acc(self, metrics):
         loss, acc = metrics[0], metrics[1]
-        if self.best_acc == None or acc > self.best_acc:
+        if self.best_acc is None or acc > self.best_acc:
             self.best_acc = acc
             self.best_loss = loss
             self.model.save(f'{self.name}')
@@ -406,11 +404,11 @@ class WeightDecaySchedule(Callback):
         self.epoch = 0
         self.wds_sched_mult = wds_sched_mult
         self.norm_wds = norm_wds
-        self.wds_history = list()
+        self.wds_history = []
 
         # Pre calculating the number of epochs in the cycle of current running epoch
-        self.epoch_to_num_cycles, i = dict(), 0
-        for cycle in range(n_cycles):
+        self.epoch_to_num_cycles, i = {}, 0
+        for _ in range(n_cycles):
             for _ in range(cycle_len):
                 self.epoch_to_num_cycles[i] = cycle_len
                 i += 1
@@ -426,11 +424,7 @@ class WeightDecaySchedule(Callback):
         # Default weight decay (as provided by user)
         wdn = self.init_wds
 
-        # Weight decay multiplier (The 'eta' in the paper). Optional.
-        wdm = 1.0
-        if self.wds_sched_mult is not None:
-            wdm = self.wds_sched_mult(self)
-
+        wdm = self.wds_sched_mult(self) if self.wds_sched_mult is not None else 1.0
         # Weight decay normalized. Optional.
         if self.norm_wds:
             wdn = wdn / np.sqrt(self.batch_per_epoch * self.epoch_to_num_cycles[self.epoch])
@@ -460,7 +454,7 @@ class DecayScheduler():
     def __init__(self, dec_type, num_it, start_val, end_val=None, extra=None):
         self.dec_type, self.nb, self.start_val, self.end_val, self.extra = dec_type, num_it, start_val, end_val, extra
         self.it = 0
-        if self.end_val is None and not (self.dec_type in [1,4]): self.end_val = 0
+        if self.end_val is None and self.dec_type not in [1, 4]: self.end_val = 0
     
     def next_val(self):
         self.it += 1
@@ -509,8 +503,7 @@ class TrainingPhase():
 
     def phase_begin(self, layer_opt, nb_batches):
         self.layer_opt = layer_opt
-        if isinstance(self.lr, tuple): start_lr,end_lr = self.lr
-        else: start_lr, end_lr = self.lr, None
+        start_lr, end_lr = self.lr if isinstance(self.lr, tuple) else (self.lr, None)
         self.lr_sched = DecayScheduler(self.lr_decay, nb_batches * self.epochs, start_lr, end_lr, extra=self.extra_lr)
         if isinstance(self.momentum, tuple): start_mom,end_mom = self.momentum
         else: start_mom, end_mom = self.momentum, None
@@ -520,8 +513,10 @@ class TrainingPhase():
         self.layer_opt.set_mom(start_mom)
         if self.beta is not None: self.layer_opt.set_beta(self.beta)
         if self.wds is not None:
-            if self.wd_loss: self.layer_opt.set_wds(self.wds)
-            else: self.layer_opt.set_wds_out(self.wds)
+            if self.wd_loss:
+                if self.wd_loss: self.layer_opt.set_wds(self.wds)
+            else:
+                self.layer_opt.set_wds_out(self.wds)
     
     def update(self):
         new_lr, new_mom = self.lr_sched.next_val(), self.mom_sched.next_val()
@@ -557,8 +552,10 @@ class OptimScheduler(LossRecorder):
     def plot_lr(self, show_text=True, show_moms=True):
         """Plots the lr rate/momentum schedule"""
         phase_limits = [0]
-        for nb_batch, phase in zip(self.nb_batches, self.phases):
-            phase_limits.append(phase_limits[-1] + nb_batch * phase.epochs)
+        phase_limits.extend(
+            phase_limits[-1] + nb_batch * phase.epochs
+            for nb_batch, phase in zip(self.nb_batches, self.phases)
+        )
         if not in_ipynb():
             plt.switch_backend('agg')
         np_plts = 2 if show_moms else 1
@@ -578,7 +575,7 @@ class OptimScheduler(LossRecorder):
                 for k in range(np_plts):
                     if i < len(self.phases)-1:
                         draw_line(axs[k], phase_limits[i+1])
-                    draw_text(axs[k], (phase_limits[i]+phase_limits[i+1])/2, text) 
+                    draw_text(axs[k], (phase_limits[i]+phase_limits[i+1])/2, text)
         if not in_ipynb():
             plt.savefig(os.path.join(self.save_path, 'lr_plot.png'))
     

@@ -42,123 +42,124 @@ cudnn.benchmark = True
 
 def main():
   if not os.path.isdir(args.save_path): os.makedirs(args.save_path)
-  log = open(os.path.join(args.save_path, 'log_seed_{}.txt'.format(args.manualSeed)), 'w')
-  print_log('save path : {}'.format(args.save_path), log)
-  state = {k: v for k, v in args._get_kwargs()}
-  print_log(state, log)
-  print_log("Random Seed: {}".format(args.manualSeed), log)
-  print_log("python version : {}".format(sys.version.replace('\n', ' ')), log)
-  print_log("torch  version : {}".format(torch.__version__), log)
-  print_log("cudnn  version : {}".format(torch.backends.cudnn.version()), log)
+  with open(os.path.join(args.save_path, f'log_seed_{args.manualSeed}.txt'), 'w') as log:
+    print_log(f'save path : {args.save_path}', log)
+    state = dict(args._get_kwargs())
+    print_log(state, log)
+    print_log(f"Random Seed: {args.manualSeed}", log)
+    print_log("python version : {}".format(sys.version.replace('\n', ' ')), log)
+    print_log(f"torch  version : {torch.__version__}", log)
+    print_log(f"cudnn  version : {torch.backends.cudnn.version()}", log)
 
-  # Init dataset
-  if not os.path.isdir(args.data_path):
-    os.makedirs(args.data_path)
+    # Init dataset
+    if not os.path.isdir(args.data_path):
+      os.makedirs(args.data_path)
 
-  if args.dataset == 'cifar10':
-    mean = [x / 255 for x in [125.3, 123.0, 113.9]]
-    std = [x / 255 for x in [63.0, 62.1, 66.7]]
-  elif args.dataset == 'cifar100':
-    mean = [x / 255 for x in [129.3, 124.1, 112.4]]
-    std = [x / 255 for x in [68.2, 65.4, 70.4]]
-  else:
-    assert False, "Unknow dataset : {}".format(args.dataset)
-
-  train_transform = transforms.Compose(
-    [transforms.RandomHorizontalFlip(), transforms.RandomCrop(32, padding=4), transforms.ToTensor(),
-     transforms.Normalize(mean, std)])
-  test_transform = transforms.Compose(
-    [transforms.ToTensor(), transforms.Normalize(mean, std)])
-
-  if args.dataset == 'cifar10':
-    train_data = dset.CIFAR10(args.data_path, train=True, transform=train_transform, download=True)
-    test_data = dset.CIFAR10(args.data_path, train=False, transform=test_transform, download=True)
-    num_classes = 10
-  elif args.dataset == 'cifar100':
-    train_data = dset.CIFAR100(args.data_path, train=True, transform=train_transform, download=True)
-    test_data = dset.CIFAR100(args.data_path, train=False, transform=test_transform, download=True)
-    num_classes = 100
-  elif args.dataset == 'svhn':
-    train_data = dset.SVHN(args.data_path, split='train', transform=train_transform, download=True)
-    test_data = dset.SVHN(args.data_path, split='test', transform=test_transform, download=True)
-    num_classes = 10
-  elif args.dataset == 'stl10':
-    train_data = dset.STL10(args.data_path, split='train', transform=train_transform, download=True)
-    test_data = dset.STL10(args.data_path, split='test', transform=test_transform, download=True)
-    num_classes = 10
-  elif args.dataset == 'imagenet':
-    assert False, 'Do not finish imagenet code'
-  else:
-    assert False, 'Do not support dataset : {}'.format(args.dataset)
-
-  train_loader = torch.utils.data.DataLoader(train_data, batch_size=args.batch_size, shuffle=True,
-                         num_workers=args.workers, pin_memory=True)
-  test_loader = torch.utils.data.DataLoader(test_data, batch_size=args.batch_size, shuffle=False,
-                        num_workers=args.workers, pin_memory=True)
-
-  # Init model, criterion, and optimizer
-  #net = models.__dict__[args.arch](num_classes).cuda()
-  net = SENet34()
-
-  # define loss function (criterion) and optimizer
-  criterion = F.nll_loss
-  optimizer = torch.optim.SGD(net.parameters(), state['learning_rate'], momentum=state['momentum'],
-                weight_decay=state['decay'], nesterov=True)
-
-  if args.use_cuda: net.cuda()
-
-  recorder = RecorderMeter(args.epochs)
-  # optionally resume from a checkpoint
-  if args.resume:
-    if os.path.isfile(args.resume):
-      print_log("=> loading checkpoint '{}'".format(args.resume), log)
-      checkpoint = torch.load(args.resume)
-      recorder = checkpoint['recorder']
-      args.start_epoch = checkpoint['epoch']
-      net.load_state_dict(checkpoint['state_dict'])
-      optimizer.load_state_dict(checkpoint['optimizer'])
-      print_log("=> loaded checkpoint '{}' (epoch {})" .format(args.resume, checkpoint['epoch']), log)
+    if args.dataset == 'cifar10':
+      mean = [x / 255 for x in [125.3, 123.0, 113.9]]
+      std = [x / 255 for x in [63.0, 62.1, 66.7]]
+    elif args.dataset == 'cifar100':
+      mean = [x / 255 for x in [129.3, 124.1, 112.4]]
+      std = [x / 255 for x in [68.2, 65.4, 70.4]]
     else:
-      print_log("=> no checkpoint found at '{}'".format(args.resume), log)
-  else:
-    print_log("=> do not use any checkpoint for model", log)
+      assert False, f"Unknow dataset : {args.dataset}"
 
-  if args.evaluate:
-    validate(test_loader, net, criterion, log)
-    return
+    train_transform = transforms.Compose(
+      [transforms.RandomHorizontalFlip(), transforms.RandomCrop(32, padding=4), transforms.ToTensor(),
+       transforms.Normalize(mean, std)])
+    test_transform = transforms.Compose(
+      [transforms.ToTensor(), transforms.Normalize(mean, std)])
 
-  # Main loop
-  start_time = time.time()
-  epoch_time = AverageMeter()
-  for epoch in range(args.start_epoch, args.epochs):
-    current_learning_rate = adjust_learning_rate(optimizer, epoch, args.gammas, args.schedule)
+    if args.dataset == 'cifar10':
+      train_data = dset.CIFAR10(args.data_path, train=True, transform=train_transform, download=True)
+      test_data = dset.CIFAR10(args.data_path, train=False, transform=test_transform, download=True)
+      num_classes = 10
+    elif args.dataset == 'cifar100':
+      train_data = dset.CIFAR100(args.data_path, train=True, transform=train_transform, download=True)
+      test_data = dset.CIFAR100(args.data_path, train=False, transform=test_transform, download=True)
+      num_classes = 100
+    elif args.dataset == 'svhn':
+      train_data = dset.SVHN(args.data_path, split='train', transform=train_transform, download=True)
+      test_data = dset.SVHN(args.data_path, split='test', transform=test_transform, download=True)
+      num_classes = 10
+    elif args.dataset == 'stl10':
+      train_data = dset.STL10(args.data_path, split='train', transform=train_transform, download=True)
+      test_data = dset.STL10(args.data_path, split='test', transform=test_transform, download=True)
+      num_classes = 10
+    elif args.dataset == 'imagenet':
+      assert False, 'Do not finish imagenet code'
+    else:
+      assert False, f'Do not support dataset : {args.dataset}'
 
-    need_hour, need_mins, need_secs = convert_secs2time(epoch_time.avg * (args.epochs-epoch))
-    need_time = '[Need: {:02d}:{:02d}:{:02d}]'.format(need_hour, need_mins, need_secs)
+    train_loader = torch.utils.data.DataLoader(train_data, batch_size=args.batch_size, shuffle=True,
+                           num_workers=args.workers, pin_memory=True)
+    test_loader = torch.utils.data.DataLoader(test_data, batch_size=args.batch_size, shuffle=False,
+                          num_workers=args.workers, pin_memory=True)
 
-    print_log('\n==>>{:s} [Epoch={:03d}/{:03d}] {:s} [learning_rate={:6.4f}]'.format(time_string(), epoch, args.epochs, need_time, current_learning_rate) \
-                + ' [Best : Accuracy={:.2f}, Error={:.2f}]'.format(recorder.max_accuracy(False), 100-recorder.max_accuracy(False)), log)
+    # Init model, criterion, and optimizer
+    #net = models.__dict__[args.arch](num_classes).cuda()
+    net = SENet34()
 
-    # train for one epoch
-    train_acc, train_los = train(train_loader, net, criterion, optimizer, epoch, log)
+    # define loss function (criterion) and optimizer
+    criterion = F.nll_loss
+    optimizer = torch.optim.SGD(net.parameters(), state['learning_rate'], momentum=state['momentum'],
+                  weight_decay=state['decay'], nesterov=True)
 
-    # evaluate on validation set
-    val_acc,   val_los   = validate(test_loader, net, criterion, log)
-    is_best = recorder.update(epoch, train_los, train_acc, val_los, val_acc)
+    if args.use_cuda: net.cuda()
 
-    save_checkpoint({
-      'epoch': epoch + 1,
-      'state_dict': net.state_dict(),
-      'recorder': recorder,
-      'optimizer' : optimizer.state_dict(),
-    }, is_best, args.save_path, 'checkpoint.pth.tar')
+    recorder = RecorderMeter(args.epochs)
+      # optionally resume from a checkpoint
+    if args.resume:
+      if os.path.isfile(args.resume):
+        print_log(f"=> loading checkpoint '{args.resume}'", log)
+        checkpoint = torch.load(args.resume)
+        recorder = checkpoint['recorder']
+        args.start_epoch = checkpoint['epoch']
+        net.load_state_dict(checkpoint['state_dict'])
+        optimizer.load_state_dict(checkpoint['optimizer'])
+        print_log(
+            f"=> loaded checkpoint '{args.resume}' (epoch {checkpoint['epoch']})",
+            log,
+        )
+      else:
+        print_log(f"=> no checkpoint found at '{args.resume}'", log)
+    else:
+      print_log("=> do not use any checkpoint for model", log)
 
-    # measure elapsed time
-    epoch_time.update(time.time() - start_time)
+    if args.evaluate:
+      validate(test_loader, net, criterion, log)
+      return
+
+    # Main loop
     start_time = time.time()
-    recorder.plot_curve( os.path.join(args.save_path, 'curve.png') )
+    epoch_time = AverageMeter()
+    for epoch in range(args.start_epoch, args.epochs):
+      current_learning_rate = adjust_learning_rate(optimizer, epoch, args.gammas, args.schedule)
 
-  log.close()
+      need_hour, need_mins, need_secs = convert_secs2time(epoch_time.avg * (args.epochs-epoch))
+      need_time = '[Need: {:02d}:{:02d}:{:02d}]'.format(need_hour, need_mins, need_secs)
+
+      print_log('\n==>>{:s} [Epoch={:03d}/{:03d}] {:s} [learning_rate={:6.4f}]'.format(time_string(), epoch, args.epochs, need_time, current_learning_rate) \
+                  + ' [Best : Accuracy={:.2f}, Error={:.2f}]'.format(recorder.max_accuracy(False), 100-recorder.max_accuracy(False)), log)
+
+      # train for one epoch
+      train_acc, train_los = train(train_loader, net, criterion, optimizer, epoch, log)
+
+      # evaluate on validation set
+      val_acc,   val_los   = validate(test_loader, net, criterion, log)
+      is_best = recorder.update(epoch, train_los, train_acc, val_los, val_acc)
+
+      save_checkpoint({
+        'epoch': epoch + 1,
+        'state_dict': net.state_dict(),
+        'recorder': recorder,
+        'optimizer' : optimizer.state_dict(),
+      }, is_best, args.save_path, 'checkpoint.pth.tar')
+
+      # measure elapsed time
+      epoch_time.update(time.time() - start_time)
+      start_time = time.time()
+      recorder.plot_curve( os.path.join(args.save_path, 'curve.png') )
 
 # train function (forward, backward, update)
 def train(train_loader, model, criterion, optimizer, epoch, log):
@@ -240,8 +241,8 @@ def validate(val_loader, model, criterion, log):
   return top1.avg, losses.avg
 
 def print_log(print_string, log):
-  print("{}".format(print_string))
-  log.write('{}\n'.format(print_string))
+  print(f"{print_string}")
+  log.write(f'{print_string}\n')
   log.flush()
 
 def save_checkpoint(state, is_best, save_path, filename):

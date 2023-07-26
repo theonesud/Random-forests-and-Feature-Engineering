@@ -28,7 +28,7 @@ class Darknet(nn.Module):
 
     def make_group_layer(self, ch_in, num_blocks, stride=1):
         layers = [ConvBN(ch_in,ch_in*2,stride=stride)]
-        for i in range(num_blocks): layers.append(DarknetBlock(ch_in*2))
+        layers.extend(DarknetBlock(ch_in*2) for _ in range(num_blocks))
         return layers
 
     def __init__(self, num_blocks, num_classes=1000, start_nf=32):

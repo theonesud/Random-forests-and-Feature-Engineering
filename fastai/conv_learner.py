@@ -34,8 +34,7 @@ class ConvnetBuilder():
         if ps is None: ps = [0.25]*len(xtra_fc) + [0.5]
         self.ps,self.xtra_fc = ps,xtra_fc
 
-        if f in model_meta: cut,self.lr_cut = model_meta[f]
-        else: cut,self.lr_cut = 0,0
+        cut,self.lr_cut = model_meta[f] if f in model_meta else (0, 0)
         cut-=xtra_cut
         layers = cut_model(f(pretrained), cut)
         self.nf = model_features[f] if f in model_features else (num_features(layers)*2)
@@ -45,8 +44,7 @@ class ConvnetBuilder():
         n_fc = len(self.xtra_fc)+1
         if not isinstance(self.ps, list): self.ps = [self.ps]*n_fc
 
-        if custom_head: fc_layers = [custom_head]
-        else: fc_layers = self.get_fc_layers()
+        fc_layers = [custom_head] if custom_head else self.get_fc_layers()
         self.n_fc = len(fc_layers)
         self.fc_model = to_gpu(nn.Sequential(*fc_layers))
         if not custom_head: apply_init(self.fc_model, kaiming_normal)
@@ -180,8 +178,7 @@ class ConvLearner(Learner):
         if len(self.activations[1])!=len(self.data.val_ds):
             predict_to_bcolz(m, self.data.val_dl, val_act)
         if self.data.test_dl and (len(self.activations[2])!=len(self.data.test_ds)):
-            if self.data.test_dl: predict_to_bcolz(m, self.data.test_dl, test_act)
-
+            predict_to_bcolz(m, self.data.test_dl, test_act)
         self.fc_data = ImageClassifierData.from_arrays(self.data.path,
                 (act, self.data.trn_y), (val_act, self.data.val_y), self.data.bs, classes=self.data.classes,
                 test = test_act if self.data.test_dl else None, num_workers=8)

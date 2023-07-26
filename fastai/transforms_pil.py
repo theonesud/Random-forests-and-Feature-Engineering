@@ -25,7 +25,7 @@ class Cutout(object):
 
         mask = np.ones((h, w), np.float32)
 
-        for n in range(self.n_holes):
+        for _ in range(self.n_holes):
             y = np.random.randint(h)
             x = np.random.randint(w)
 
