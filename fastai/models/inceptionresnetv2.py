@@ -57,8 +57,7 @@ class Mixed_5b(nn.Module):
         x1 = self.branch1(x)
         x2 = self.branch2(x)
         x3 = self.branch3(x)
-        out = torch.cat((x0, x1, x2, x3), 1)
-        return out
+        return torch.cat((x0, x1, x2, x3), 1)
 
 
 class Block35(nn.Module):
@@ -114,8 +113,7 @@ class Mixed_6a(nn.Module):
         x0 = self.branch0(x)
         x1 = self.branch1(x)
         x2 = self.branch2(x)
-        out = torch.cat((x0, x1, x2), 1)
-        return out
+        return torch.cat((x0, x1, x2), 1)
 
 
 class Block17(nn.Module):
@@ -174,8 +172,7 @@ class Mixed_7a(nn.Module):
         x1 = self.branch1(x)
         x2 = self.branch2(x)
         x3 = self.branch3(x)
-        out = torch.cat((x0, x1, x2, x3), 1)
-        return out
+        return torch.cat((x0, x1, x2, x3), 1)
 
 
 class Block8(nn.Module):
@@ -314,23 +311,24 @@ def inceptionresnetv2(num_classes=1000, pretrained='imagenet'):
     """
     if pretrained:
         settings = pretrained_settings['inceptionresnetv2'][pretrained]
-        assert num_classes == settings['num_classes'], \
-            "num_classes should be {}, but is {}".format(settings['num_classes'], num_classes)
+        assert (
+            num_classes == settings['num_classes']
+        ), f"num_classes should be {settings['num_classes']}, but is {num_classes}"
 
         # both 'imagenet'&'imagenet+background' are loaded from same parameters
         model = InceptionResNetV2(num_classes=1001)
         model.load_state_dict(model_zoo.load_url(settings['url']))
-        
+
         if pretrained == 'imagenet':
             new_last_linear = nn.Linear(1536, 1000)
             new_last_linear.weight.data = model.last_linear.weight.data[1:]
             new_last_linear.bias.data = model.last_linear.bias.data[1:]
             model.last_linear = new_last_linear
-        
+
         model.input_space = settings['input_space']
         model.input_size = settings['input_size']
         model.input_range = settings['input_range']
-        
+
         model.mean = settings['mean']
         model.std = settings['std']
     else:

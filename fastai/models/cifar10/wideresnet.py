@@ -45,7 +45,7 @@ class WideResNet(nn.Module):
     def __init__(self, num_groups, N, num_classes, k=1, drop_p=0.0, start_nf=16):
         super().__init__()
         n_channels = [start_nf]
-        for i in range(num_groups): n_channels.append(start_nf*(2**i)*k)
+        n_channels.extend(start_nf*(2**i)*k for i in range(num_groups))
 
         layers = [conv_2d(3, n_channels[0], 3, 1)]  # conv1
         for i in range(num_groups):

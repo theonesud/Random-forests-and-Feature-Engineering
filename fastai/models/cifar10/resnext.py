@@ -82,12 +82,20 @@ class CifarResNeXt(nn.Module):
         nn.BatchNorm2d(exp_planes),
       )
 
-    layers = []
-    layers.append(self.block(self.inplanes, planes, self.cardinality, self.base_width, stride, downsample))
+    layers = [
+        self.block(
+            self.inplanes,
+            planes,
+            self.cardinality,
+            self.base_width,
+            stride,
+            downsample,
+        )
+    ]
     self.inplanes = exp_planes
-    for i in range(1, self.layer_blocks):
-      layers.append(self.block(self.inplanes, planes, self.cardinality, self.base_width))
-
+    layers.extend(
+        self.block(self.inplanes, planes, self.cardinality, self.base_width)
+        for _ in range(1, self.layer_blocks))
     return nn.Sequential(*layers)
 
   def forward(self, x):
@@ -106,8 +114,7 @@ def resnext29_16_64(num_classes=10):
   Args:
     num_classes (uint): number of classes
   """
-  model = CifarResNeXt(ResNeXtBottleneck, 29, 16, 64, num_classes)
-  return model
+  return CifarResNeXt(ResNeXtBottleneck, 29, 16, 64, num_classes)
 
 def resnext29_8_64(num_classes=10):
   """Constructs a ResNeXt-29, 8*64d model for CIFAR-10 (by default)
@@ -115,5 +122,4 @@ def resnext29_8_64(num_classes=10):
   Args:
     num_classes (uint): number of classes
   """
-  model = CifarResNeXt(ResNeXtBottleneck, 29, 8, 64, num_classes)
-  return model
+  return CifarResNeXt(ResNeXtBottleneck, 29, 8, 64, num_classes)

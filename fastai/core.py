@@ -15,8 +15,7 @@ def listify(x, y):
     return x
 
 def datafy(x):
-    if is_listy(x): return [o.data for o in x]
-    else:           return x.data
+    return [o.data for o in x] if is_listy(x) else x.data
 
 conv_dict = {np.dtype('int8'): torch.LongTensor, np.dtype('int16'): torch.LongTensor,
     np.dtype('int32'): torch.LongTensor, np.dtype('int64'): torch.LongTensor,
@@ -186,7 +185,7 @@ def chunk_iter(iterable, chunk_size):
     while True:
         chunk = []
         try:
-            for _ in range(chunk_size): chunk.append(next(iterable))
+            chunk.extend(next(iterable) for _ in range(chunk_size))
             yield chunk
         except StopIteration:
             if chunk: yield chunk

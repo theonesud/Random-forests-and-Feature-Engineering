@@ -38,7 +38,9 @@ class RecorderMeter(object):
     self.epoch_accuracy= self.epoch_accuracy
 
   def update(self, idx, train_loss, train_acc, val_loss, val_acc):
-    assert idx >= 0 and idx < self.total_epoch, 'total_epoch : {} , but update with the {} index'.format(self.total_epoch, idx)
+    assert (
+        idx >= 0 and idx < self.total_epoch
+    ), f'total_epoch : {self.total_epoch} , but update with the {idx} index'
     self.epoch_losses  [idx, 0] = train_loss
     self.epoch_losses  [idx, 1] = val_loss
     self.epoch_accuracy[idx, 0] = train_acc
@@ -53,14 +55,14 @@ class RecorderMeter(object):
   
   def plot_curve(self, save_path):
     title = 'the accuracy/loss curve of train/val'
-    dpi = 80  
+    dpi = 80
     width, height = 1200, 800
     legend_fontsize = 10
     scale_distance = 48.8
     figsize = width / float(dpi), height / float(dpi)
 
     fig = plt.figure(figsize=figsize)
-    x_axis = np.array([i for i in range(self.total_epoch)]) # epochs
+    x_axis = np.array(list(range(self.total_epoch)))
     y_axis = np.zeros(self.total_epoch)
 
     plt.xlim(0, self.total_epoch)
@@ -73,7 +75,7 @@ class RecorderMeter(object):
     plt.title(title, fontsize=20)
     plt.xlabel('the training epoch', fontsize=16)
     plt.ylabel('accuracy', fontsize=16)
-  
+
     y_axis[:] = self.epoch_accuracy[:, 0]
     plt.plot(x_axis, y_axis, color='g', linestyle='-', label='train-accuracy', lw=2)
     plt.legend(loc=4, fontsize=legend_fontsize)
@@ -82,7 +84,7 @@ class RecorderMeter(object):
     plt.plot(x_axis, y_axis, color='y', linestyle='-', label='valid-accuracy', lw=2)
     plt.legend(loc=4, fontsize=legend_fontsize)
 
-    
+
     y_axis[:] = self.epoch_losses[:, 0]
     plt.plot(x_axis, y_axis*50, color='g', linestyle=':', label='train-loss-x50', lw=2)
     plt.legend(loc=4, fontsize=legend_fontsize)
@@ -93,14 +95,13 @@ class RecorderMeter(object):
 
     if save_path is not None:
       fig.savefig(save_path, dpi=dpi, bbox_inches='tight')
-      print ('---- save figure {} into {}'.format(title, save_path))
+      print(f'---- save figure {title} into {save_path}')
     plt.close(fig)
     
 
 def time_string():
   ISOTIMEFORMAT='%Y-%m-%d %X'
-  string = '[{}]'.format(time.strftime( ISOTIMEFORMAT, time.gmtime(time.time()) ))
-  return string
+  return f'[{time.strftime(ISOTIMEFORMAT, time.gmtime(time.time()))}]'
 
 def convert_secs2time(epoch_time):
   need_hour = int(epoch_time / 3600)
@@ -110,5 +111,5 @@ def convert_secs2time(epoch_time):
 
 def time_file_str():
   ISOTIMEFORMAT='%Y-%m-%d'
-  string = '{}'.format(time.strftime( ISOTIMEFORMAT, time.gmtime(time.time()) ))
-  return string + '-{}'.format(random.randint(1, 10000))
+  string = f'{time.strftime(ISOTIMEFORMAT, time.gmtime(time.time()))}'
+  return f'{string}-{random.randint(1, 10000)}'

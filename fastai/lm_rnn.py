@@ -79,7 +79,9 @@ class RNN_Encoder(nn.Module):
 
         self.emb_sz,self.n_hid,self.n_layers,self.dropoute = emb_sz,n_hid,n_layers,dropoute
         self.dropouti = LockedDropout(dropouti)
-        self.dropouths = nn.ModuleList([LockedDropout(dropouth) for l in range(n_layers)])
+        self.dropouths = nn.ModuleList(
+            [LockedDropout(dropouth) for _ in range(n_layers)]
+        )
 
     def forward(self, input):
         """ Invoked during the forward propagation of the RNN_Encoder module.
